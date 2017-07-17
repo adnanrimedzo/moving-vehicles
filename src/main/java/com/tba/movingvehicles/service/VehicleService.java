@@ -4,6 +4,9 @@ import com.tba.movingvehicles.model.Vehicle;
 
 import com.tba.movingvehicles.model.Direction;
 import com.tba.movingvehicles.model.Vehicles;
+import org.apache.activemq.ActiveMQConnectionFactory;
+
+import javax.jms.*;
 
 import javax.swing.*;
 import java.awt.*;
@@ -23,16 +26,27 @@ public class VehicleService {
     List<Vehicle> vehicleList = null;
     List<Future> runnigVehicles = null;
     ExecutorService executor = null;
+    Connection connection = null;
+    Queue queue = null;
+    MessageProducer producer = null;
+    Session session = null;
 
-
-    public VehicleService() {
+    public VehicleService() throws JMSException {
         vehicleList = new ArrayList<Vehicle>(0);
         runnigVehicles = new ArrayList<Future>(0);
         executor = Executors.newCachedThreadPool();
+
+        ActiveMQConnectionFactory factory = new ActiveMQConnectionFactory
+                ("tcp://localhost:61616");
+        connection = factory.createConnection();
+        connection.start();
+        session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
+        queue = session.createQueue("test_queue");
+        producer = session.createProducer(queue);
     }
 
 
-    public void listCases() {
+    public void listCases() throws JMSException {
         System.out.print(
                 "1. Add a vehicle\n" +
                         "2. Change vehicle direction\n" +
@@ -72,7 +86,7 @@ public class VehicleService {
         return Direction.UP;
     }
 
-    private void getCaseNumber() {
+    private void getCaseNumber() throws JMSException {
         System.out.println("Please select a case between 1 and 3: ");
         String input = null;
         try {
@@ -113,7 +127,7 @@ public class VehicleService {
         return number;
     }
 
-    private void runCase() {
+    private void runCase() throws JMSException {
         switch (caseNumber) {
             case 1:
                 useCase1();
@@ -137,10 +151,12 @@ public class VehicleService {
         System.out.println("Vehicle has been added with number: " + vehicle.getVehicleNumber() + " direction: " + vehicle.getDirection());
     }
 
-    public void useCase2() {
+    public void useCase2() throws JMSException {
         listVehicles();
-        Vehicle vehicle = vehicleList.get(getVehicleNumber() - 1);
-        vehicle.setDirection(getDirection());
+        int number = getVehicleNumber();
+        Enum direction=getDirection();
+        TextMessage message = session.createTextMessage("");
+        producer.send(message);
         System.out.println("Vehicle's direction with number: " + vehicle.getVehicleNumber() + " changed to " + vehicle.getDirection());
     }
 
@@ -195,6 +211,7 @@ public class VehicleService {
 
     @Override
     public void finalize() {
+        connection.stop();
         executor.shutdownNow();
     }
 
