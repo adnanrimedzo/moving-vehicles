@@ -1,10 +1,16 @@
 package com.tba.movingvehicles.model;
 
+import org.apache.activemq.ActiveMQConnectionFactory;
+
+import javax.jms.Connection;
+import javax.jms.Session;
 import javax.swing.*;
 import java.awt.*;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Random;
 import java.util.concurrent.Callable;
+import javax.jms.*;
+import javax.jms.Queue;
 
 public class Vehicle extends JPanel {
     private Color color;
@@ -33,10 +39,19 @@ public class Vehicle extends JPanel {
         setVehicleCallable(new Callable() {
             @Override
             public Integer call() throws Exception {
-                Enum previous = getDirection();
+                ActiveMQConnectionFactory factory = new ActiveMQConnectionFactory
+                        ("tcp://0.0.0.0:61616");
+
+                Connection connection = factory.createConnection();
+
+                connection.start();
+
+                Session session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
+                Queue queue = session.createQueue("vehicleque");
+                MessageConsumer consumer = session.createConsumer(queue);
 
                 try {
-                    // Randamize the location...
+
                     SwingUtilities.invokeAndWait(new Runnable() {
                         @Override
                         public void run() {
@@ -53,6 +68,18 @@ public class Vehicle extends JPanel {
                 }
 
                 while (isVisible()) {
+
+                    TextMessage message = (TextMessage) consumer.receive(500);
+
+                    DirectionMessage directionMessage = null;
+
+                    if(message !=null)
+                    directionMessage = DirectionMessage.getClassFromJson(message.getText());
+                    if (directionMessage != null && directionMessage.getVehicleNumber() == getVehicleNumber()) {
+                        setDirection(directionMessage.getDirection());
+                        System.out.println("I am vehicle with number: " + directionMessage.getVehicleNumber() + " my direction changed to " + directionMessage.getDirection());
+                    }
+
                     try {
                         Thread.sleep(getDelay());
                     } catch (InterruptedException e) {

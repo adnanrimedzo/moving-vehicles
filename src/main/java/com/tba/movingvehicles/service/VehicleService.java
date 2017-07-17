@@ -1,13 +1,13 @@
 package com.tba.movingvehicles.service;
 
-import com.tba.movingvehicles.model.Vehicle;
-
 import com.tba.movingvehicles.model.Direction;
+import com.tba.movingvehicles.model.DirectionMessage;
+import com.tba.movingvehicles.model.Vehicle;
 import com.tba.movingvehicles.model.Vehicles;
 import org.apache.activemq.ActiveMQConnectionFactory;
 
 import javax.jms.*;
-
+import javax.jms.Queue;
 import javax.swing.*;
 import java.awt.*;
 import java.io.BufferedReader;
@@ -37,11 +37,11 @@ public class VehicleService {
         executor = Executors.newCachedThreadPool();
 
         ActiveMQConnectionFactory factory = new ActiveMQConnectionFactory
-                ("tcp://localhost:61616");
+                ("tcp://0.0.0.0:61616");
         connection = factory.createConnection();
         connection.start();
         session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
-        queue = session.createQueue("test_queue");
+        queue = session.createQueue("vehicleque");
         producer = session.createProducer(queue);
     }
 
@@ -153,11 +153,12 @@ public class VehicleService {
 
     public void useCase2() throws JMSException {
         listVehicles();
-        int number = getVehicleNumber();
-        Enum direction=getDirection();
-        TextMessage message = session.createTextMessage("");
+        DirectionMessage directionMessage = new DirectionMessage();
+        directionMessage.setVehicleNumber(getVehicleNumber());
+        directionMessage.setDirection(getDirection());
+        TextMessage message = session.createTextMessage(directionMessage.getJson(directionMessage));
         producer.send(message);
-        System.out.println("Vehicle's direction with number: " + vehicle.getVehicleNumber() + " changed to " + vehicle.getDirection());
+        System.out.println("Vehicle's direction with number: " + directionMessage.getVehicleNumber() + " changed to " + directionMessage.getDirection());
     }
 
     public void useCase3() {
@@ -210,7 +211,7 @@ public class VehicleService {
     }
 
     @Override
-    public void finalize() {
+    public void finalize() throws JMSException{
         connection.stop();
         executor.shutdownNow();
     }

@@ -11,6 +11,8 @@ public enum Direction {
         this.key = key;
     }
 
+    private Direction(){}
+
     public String getKey() {
         return key;
     }
