@@ -1,4 +1,4 @@
-# Case study project for TBT
+# Multiple Vehicles
 
 This project implemented for animating behaviour of multiple vehicles movements.
 Application does three things.
